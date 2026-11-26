@@ -88,6 +88,11 @@ O workflow `.github/workflows/ci.yml` roda em push e pull request para a `main`,
 paralelo (API e E2E). Cada job publica o relatório como artefato e escreve um resumo na página da
 execução. O teste de carga só roda quando disparado manualmente, para não sobrecarregar a API pública.
 
+Antes do E2E o próprio pipeline checa se os sites estão acessíveis. A loja demo usa proteção anti-bot e
+costuma bloquear IP de servidor; quando isso acontece, o job de E2E é marcado como não executado, com
+aviso e explicação no resumo — em vez de aparecer como falha de teste. Na prática: API roda no CI e o
+E2E roda na máquina local, que é onde o acesso é liberado.
+
 ## Observações
 
 - O checkout da loja tem um problema no passo de endereço: ao consultar o CEP, ele às vezes limpa país
