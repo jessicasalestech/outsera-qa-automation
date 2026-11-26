@@ -1,0 +1,9 @@
+# Normalise line endings so the suite behaves the same on macOS, Linux and Windows.
+* text=auto eol=lf
+
+# Binary / generated files
+*.png binary
+*.jpg binary
+*.zip binary
+*.webm binary
+package-lock.json -diff linguist-generated
