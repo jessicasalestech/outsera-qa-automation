@@ -5,57 +5,54 @@ import { test } from '../fixtures';
 
 const { Given, When, Then } = createBdd(test);
 
-Given('I am on the login page', async ({ loginPage }) => {
-  await loginPage.open();
+Given('que estou na página de login', async ({ login }) => {
+  await login.abrir();
 });
 
-When('I sign in with my valid credentials', async ({ loginPage }) => {
-  await loginPage.signIn(env.customer.email, env.customer.password);
+When('faço login com credenciais válidas', async ({ login }) => {
+  await login.entrar(env.cliente.email, env.cliente.senha);
+});
+
+When('faço login com meu e-mail e a senha {string}', async ({ login }, senha: string) => {
+  await login.entrar(env.cliente.email, senha);
 });
 
 When(
-  'I sign in with my valid email and the password {string}',
-  async ({ loginPage }, password: string) => {
-    await loginPage.signIn(env.customer.email, password);
+  'faço login com o e-mail {string} e a senha {string}',
+  async ({ login }, email: string, senha: string) => {
+    await login.entrar(email, senha);
   },
 );
 
-When(
-  'I sign in with the email {string} and the password {string}',
-  async ({ loginPage }, email: string, password: string) => {
-    await loginPage.signIn(email, password);
-  },
-);
-
-When('I submit the login form without filling the fields', async ({ loginPage }) => {
-  await loginPage.submitWithoutFilling();
+When('envio o formulário de login sem preencher nada', async ({ login }) => {
+  await login.enviarFormularioVazio();
 });
 
-Then('I should be on the account page', async ({ page }) => {
+Then('devo estar na página da minha conta', async ({ page }) => {
   await expect(page).toHaveURL(/\/account$/);
 });
 
-Then('I should see the page title {string}', async ({ accountPage }, title: string) => {
-  await expect(accountPage.pageTitle).toHaveText(title);
+Then('devo ver o título da página {string}', async ({ conta }, titulo: string) => {
+  await expect(conta.titulo).toHaveText(titulo);
 });
 
-Then('I should see the sign out option', async ({ accountPage }) => {
-  await accountPage.openUserMenu();
-  await expect(accountPage.signOutOption).toBeVisible();
+Then('devo ver a opção de sair', async ({ conta }) => {
+  await conta.abrirMenuUsuario();
+  await expect(conta.opcaoSair).toBeVisible();
 });
 
-Then('I should stay on the login page', async ({ page }) => {
+Then('devo continuar na página de login', async ({ page }) => {
   await expect(page).toHaveURL(/\/auth\/login$/);
 });
 
-Then('I should see the login error {string}', async ({ loginPage }, message: string) => {
-  await expect(loginPage.errorMessage).toContainText(message);
+Then('devo ver o erro de login {string}', async ({ login }, mensagem: string) => {
+  await expect(login.mensagemErro).toContainText(mensagem);
 });
 
-Then('I should see the email error {string}', async ({ loginPage }, message: string) => {
-  await expect(loginPage.fieldError('email')).toHaveText(message);
+Then('devo ver o erro do e-mail {string}', async ({ login }, mensagem: string) => {
+  await expect(login.erroDoCampo('email')).toHaveText(mensagem);
 });
 
-Then('I should see the password error {string}', async ({ loginPage }, message: string) => {
-  await expect(loginPage.fieldError('password')).toHaveText(message);
+Then('devo ver o erro da senha {string}', async ({ login }, mensagem: string) => {
+  await expect(login.erroDoCampo('password')).toHaveText(mensagem);
 });

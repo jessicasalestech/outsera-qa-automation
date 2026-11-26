@@ -1,38 +1,28 @@
 import { test as base } from 'playwright-bdd';
-import { AccountPage } from '../../src/pages/account.page';
-import { CheckoutPage } from '../../src/pages/checkout.page';
-import { HomePage } from '../../src/pages/home.page';
-import { LoginPage } from '../../src/pages/login.page';
-import { ProductPage } from '../../src/pages/product.page';
+import { PaginaConta } from '../../src/pages/account.page';
+import { PaginaCheckout } from '../../src/pages/checkout.page';
+import { PaginaProdutos } from '../../src/pages/home.page';
+import { PaginaLogin } from '../../src/pages/login.page';
 
-/**
- * Fixtures shared by the Gherkin steps.
- * playwright-bdd uses this file (declared in the `steps` pattern of
- * playwright.config.ts) as the test instance for the generated specs,
- * so every step gets the page objects ready to use.
- */
-type E2EFixtures = {
-  loginPage: LoginPage;
-  accountPage: AccountPage;
-  homePage: HomePage;
-  productPage: ProductPage;
-  checkoutPage: CheckoutPage;
+// Fixtures usadas pelos steps: cada uma entrega a página já pronta.
+type FixturesE2E = {
+  login: PaginaLogin;
+  conta: PaginaConta;
+  produtos: PaginaProdutos;
+  checkout: PaginaCheckout;
 };
 
-export const test = base.extend<E2EFixtures>({
-  loginPage: async ({ page }, use) => {
-    await use(new LoginPage(page));
+export const test = base.extend<FixturesE2E>({
+  login: async ({ page }, use) => {
+    await use(new PaginaLogin(page));
   },
-  accountPage: async ({ page }, use) => {
-    await use(new AccountPage(page));
+  conta: async ({ page }, use) => {
+    await use(new PaginaConta(page));
   },
-  homePage: async ({ page }, use) => {
-    await use(new HomePage(page));
+  produtos: async ({ page }, use) => {
+    await use(new PaginaProdutos(page));
   },
-  productPage: async ({ page }, use) => {
-    await use(new ProductPage(page));
-  },
-  checkoutPage: async ({ page }, use) => {
-    await use(new CheckoutPage(page));
+  checkout: async ({ page }, use) => {
+    await use(new PaginaCheckout(page));
   },
 });

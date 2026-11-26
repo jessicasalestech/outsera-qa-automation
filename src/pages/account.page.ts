@@ -1,27 +1,28 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 
-/** Page Object for /account (customer area shown after a successful login). */
-export class AccountPage {
+// Área do cliente, exibida depois do login.
+export class PaginaConta {
   constructor(private readonly page: Page) {}
 
-  get pageTitle(): Locator {
+  get titulo(): Locator {
     return this.page.getByTestId('page-title');
   }
 
-  get userMenuButton(): Locator {
+  get botaoMenuUsuario(): Locator {
     return this.page.getByTestId('nav-menu');
   }
 
-  get signOutOption(): Locator {
+  get opcaoSair(): Locator {
     return this.page.getByTestId('nav-sign-out');
   }
 
-  async openUserMenu(): Promise<void> {
-    await this.userMenuButton.click();
+  // O menu só abre no clique: a opção "Sign out" fica escondida até então.
+  async abrirMenuUsuario(): Promise<void> {
+    await this.botaoMenuUsuario.click();
   }
 
-  async expectToBeLoaded(): Promise<void> {
+  async validarQueEstaNaConta(): Promise<void> {
     await expect(this.page).toHaveURL(/\/account$/);
-    await expect(this.pageTitle).toHaveText('My account');
+    await expect(this.titulo).toHaveText('My account');
   }
 }

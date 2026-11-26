@@ -1,31 +1,32 @@
+# language: pt
+
 @login
-Feature: Customer login
+Funcionalidade: Login do cliente
+  Como cliente da loja
+  Quero entrar com meu e-mail e senha
+  Para acessar minha conta e fazer pedidos
 
-  As a customer of the practice e-commerce
-  I want to authenticate with my credentials
-  So that I can access my account and place orders
+  Contexto:
+    Dado que estou na página de login
 
-  Background:
-    Given I am on the login page
+  Cenário: Login com credenciais válidas
+    Quando faço login com credenciais válidas
+    Então devo estar na página da minha conta
+    E devo ver o título da página "My account"
+    E devo ver a opção de sair
 
-  Scenario: Successful login with valid credentials
-    When I sign in with my valid credentials
-    Then I should be on the account page
-    And I should see the page title "My account"
-    And I should see the sign out option
+  Cenário: Login com senha incorreta
+    Quando faço login com meu e-mail e a senha "senha-errada"
+    Então devo continuar na página de login
+    E devo ver o erro de login "Invalid email or password"
 
-  Scenario: Login with a wrong password
-    When I sign in with my valid email and the password "wrong-password"
-    Then I should stay on the login page
-    And I should see the login error "Invalid email or password"
+  Cenário: Login com usuário não cadastrado
+    Quando faço login com o e-mail "fantasma@exemplo.com" e a senha "welcome01"
+    Então devo continuar na página de login
+    E devo ver o erro de login "Invalid email or password"
 
-  Scenario: Login with an unregistered user
-    When I sign in with the email "ghost.user@example.com" and the password "welcome01"
-    Then I should stay on the login page
-    And I should see the login error "Invalid email or password"
-
-  Scenario: Login with empty required fields
-    When I submit the login form without filling the fields
-    Then I should stay on the login page
-    And I should see the email error "Email is required"
-    And I should see the password error "Password is required"
+  Cenário: Login com campos obrigatórios em branco
+    Quando envio o formulário de login sem preencher nada
+    Então devo continuar na página de login
+    E devo ver o erro do e-mail "Email is required"
+    E devo ver o erro da senha "Password is required"

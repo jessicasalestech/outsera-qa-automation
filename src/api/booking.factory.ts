@@ -1,11 +1,7 @@
-import type { Booking } from './types';
+import type { Reserva } from './types';
 
-/**
- * Test data factory.
- * Every call returns a valid, independent booking payload, so tests never
- * depend on data created by another test.
- */
-export const buildBooking = (overrides: Partial<Booking> = {}): Booking => ({
+// Monta uma reserva válida. Cada teste pode sobrescrever só o que interessa.
+export const criarReserva = (alteracoes: Partial<Reserva> = {}): Reserva => ({
   firstname: 'Jessica',
   lastname: 'Sales',
   totalprice: 250,
@@ -14,9 +10,9 @@ export const buildBooking = (overrides: Partial<Booking> = {}): Booking => ({
     checkin: '2026-12-01',
     checkout: '2026-12-05',
   },
-  additionalneeds: 'Breakfast',
-  ...overrides,
+  additionalneeds: 'Café da manhã',
+  ...alteracoes,
 });
 
-/** Adds a timestamp suffix, useful to search for a booking created in a given run. */
-export const uniqueSuffix = (): string => String(Date.now()).slice(-6);
+// Sufixo para achar a reserva criada em uma execução específica (filtro por nome).
+export const sufixoUnico = (): string => String(Date.now()).slice(-6);

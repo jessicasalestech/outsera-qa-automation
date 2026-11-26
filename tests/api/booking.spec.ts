@@ -1,202 +1,193 @@
 import { test, expect } from './fixtures';
-import { buildBooking, uniqueSuffix } from '../../src/api/booking.factory';
-import type { Booking, BookingIdEntry, CreateBookingResponse } from '../../src/api/types';
+import { criarReserva, sufixoUnico } from '../../src/api/booking.factory';
+import type { IdReserva, Reserva, ReservaCriada } from '../../src/api/types';
 
-/**
- * API suite - Restful-booker (https://restful-booker.herokuapp.com)
- *
- * Coverage per HTTP method: status code, headers and body,
- * with positive and negative scenarios (no auth, invalid auth,
- * missing payload, unknown id, malformed JSON).
- */
+// API Restful-booker: status, headers e corpo de cada método,
+// com cenários positivos e negativos.
 
-test.describe('API - GET /ping (health check)', () => {
-  test('reports the API as available', async ({ bookings }) => {
-    const response = await bookings.ping();
+test.describe('API - GET /ping (saúde da API)', () => {
+  test('informa que a API está no ar', async ({ reservas }) => {
+    const resposta = await reservas.ping();
 
-    expect(response.status()).toBe(201);
-    expect(await response.text()).toBe('Created');
+    expect(resposta.status()).toBe(201);
+    expect(await resposta.text()).toBe('Created');
   });
 });
 
 test.describe('API - GET /booking', () => {
-  test('lists bookings with numeric ids', async ({ bookings }) => {
-    const response = await bookings.listBookings();
+  test('lista as reservas com id numérico', async ({ reservas }) => {
+    const resposta = await reservas.listarReservas();
 
-    expect(response.status()).toBe(200);
-    expect(response.headers()['content-type']).toContain('application/json');
+    expect(resposta.status()).toBe(200);
+    expect(resposta.headers()['content-type']).toContain('application/json');
 
-    const body = (await response.json()) as BookingIdEntry[];
-    expect(Array.isArray(body)).toBe(true);
-    expect(body.length).toBeGreaterThan(0);
-    expect(body[0]).toEqual({ bookingid: expect.any(Number) });
+    const corpo = (await resposta.json()) as IdReserva[];
+    expect(Array.isArray(corpo)).toBe(true);
+    expect(corpo.length).toBeGreaterThan(0);
+    expect(corpo[0]).toEqual({ bookingid: expect.any(Number) });
   });
 
-  test('returns a booking with the full contract', async ({ createBooking, bookings }) => {
-    const payload = buildBooking();
-    const id = await createBooking(payload);
+  test('busca uma reserva com o contrato completo', async ({ criarReservaComLimpeza, reservas }) => {
+    const dados = criarReserva();
+    const id = await criarReservaComLimpeza(dados);
 
-    const response = await bookings.getBooking(id);
+    const resposta = await reservas.buscarReserva(id);
 
-    expect(response.status()).toBe(200);
-    expect(response.headers()['content-type']).toContain('application/json');
-
-    const body = (await response.json()) as Booking;
-    expect(body).toMatchObject(payload as unknown as Record<string, unknown>);
-    expect(body.totalprice).toBe(payload.totalprice); // number, not string
-    expect(body.depositpaid).toBe(true); // boolean, not "true"
-    expect(body.bookingdates).toEqual(payload.bookingdates);
+    expect(resposta.status()).toBe(200);
+    const corpo = (await resposta.json()) as Reserva;
+    expect(corpo).toMatchObject(dados as unknown as Record<string, unknown>);
+    expect(typeof corpo.totalprice).toBe('number');
+    expect(typeof corpo.depositpaid).toBe('boolean');
+    expect(corpo.bookingdates).toEqual(dados.bookingdates);
   });
 
-  test('filters bookings by firstname and lastname', async ({ createBooking, bookings }) => {
-    const suffix = uniqueSuffix();
-    const id = await createBooking({ firstname: `Jessica${suffix}`, lastname: 'Sales' });
+  test('filtra reservas por nome e sobrenome', async ({ criarReservaComLimpeza, reservas }) => {
+    const sufixo = sufixoUnico();
+    const id = await criarReservaComLimpeza({ firstname: `Jessica${sufixo}`, lastname: 'Sales' });
 
-    const response = await bookings.listBookings({ firstname: `Jessica${suffix}`, lastname: 'Sales' });
+    const resposta = await reservas.listarReservas({ firstname: `Jessica${sufixo}`, lastname: 'Sales' });
 
-    expect(response.status()).toBe(200);
-    const body = (await response.json()) as BookingIdEntry[];
-    expect(body.map((item) => item.bookingid)).toContain(id);
+    expect(resposta.status()).toBe(200);
+    const corpo = (await resposta.json()) as IdReserva[];
+    expect(corpo.map((item) => item.bookingid)).toContain(id);
   });
 
-  test('returns 404 for an unknown booking id', async ({ bookings }) => {
-    const response = await bookings.getBooking(999999);
+  test('devolve 404 para reserva inexistente', async ({ reservas }) => {
+    const resposta = await reservas.buscarReserva(999999);
 
-    expect(response.status()).toBe(404);
-    expect(await response.text()).toBe('Not Found');
+    expect(resposta.status()).toBe(404);
+    expect(await resposta.text()).toBe('Not Found');
   });
 });
 
 test.describe('API - POST /booking', () => {
-  test('creates a booking and echoes the payload', async ({ bookings }) => {
-    const payload = buildBooking();
+  test('cria a reserva e devolve o que foi enviado', async ({ reservas }) => {
+    const dados = criarReserva();
 
-    const response = await bookings.createBooking(payload);
+    const resposta = await reservas.criar(dados);
 
-    expect(response.status()).toBe(200);
-    expect(response.headers()['content-type']).toContain('application/json');
+    expect(resposta.status()).toBe(200);
+    expect(resposta.headers()['content-type']).toContain('application/json');
 
-    const body = (await response.json()) as CreateBookingResponse;
-    expect(body.bookingid).toEqual(expect.any(Number));
-    expect(body.booking).toEqual(payload);
+    const corpo = (await resposta.json()) as ReservaCriada;
+    expect(corpo.bookingid).toEqual(expect.any(Number));
+    expect(corpo.booking).toEqual(dados);
   });
 
-  test('persists the created booking (read after write)', async ({ createBooking, bookings }) => {
-    const payload = buildBooking({ firstname: 'Ana', additionalneeds: 'Lunch' });
-    const id = await createBooking(payload);
+  test('a reserva criada pode ser lida depois', async ({ criarReservaComLimpeza, reservas }) => {
+    const id = await criarReservaComLimpeza({ firstname: 'Ana', additionalneeds: 'Almoço' });
 
-    const response = await bookings.getBooking(id);
+    const resposta = await reservas.buscarReserva(id);
 
-    expect(response.status()).toBe(200);
-    expect(await response.json()).toMatchObject({ firstname: 'Ana', additionalneeds: 'Lunch' });
+    expect(resposta.status()).toBe(200);
+    expect(await resposta.json()).toMatchObject({ firstname: 'Ana', additionalneeds: 'Almoço' });
   });
 
-  test('returns 500 when required fields are missing (documented defect)', async ({ bookings }) => {
-    // The API does not validate the payload: it breaks instead of answering 400.
-    // The test documents the real behaviour and works as a regression alarm.
-    const response = await bookings.createBooking({ firstname: 'OnlyName' });
+  test('devolve 500 quando faltam campos obrigatórios (defeito da API)', async ({ reservas }) => {
+    // A API não valida o payload e quebra em vez de responder 400.
+    // O teste documenta o comportamento atual e serve de alarme se corrigirem.
+    const resposta = await reservas.criar({ firstname: 'SóNome' });
 
-    expect(response.status()).toBe(500);
+    expect(resposta.status()).toBe(500);
   });
 
-  test('returns 400 for a malformed JSON body', async ({ bookings, request }) => {
-    const response = await request.post('/booking', {
+  test('devolve 400 para JSON malformado', async ({ reservas, request }) => {
+    const resposta = await request.post('/booking', {
       headers: { 'Content-Type': 'application/json' },
       data: '{"firstname":',
     });
 
-    expect(response.status()).toBe(400);
+    expect(resposta.status()).toBe(400);
   });
 });
 
 test.describe('API - PUT /booking/:id', () => {
-  test('updates a booking with a valid token', async ({ createBooking, bookings, authToken }) => {
-    const id = await createBooking({ firstname: 'Before', totalprice: 100 });
-    const updated = buildBooking({ firstname: 'After', totalprice: 999 });
+  test('atualiza a reserva com token válido', async ({ criarReservaComLimpeza, reservas, token }) => {
+    const id = await criarReservaComLimpeza({ firstname: 'Antes', totalprice: 100 });
+    const atualizada = criarReserva({ firstname: 'Depois', totalprice: 999 });
 
-    const response = await bookings.updateBooking(id, updated, authToken);
+    const resposta = await reservas.atualizar(id, atualizada, token);
 
-    expect(response.status()).toBe(200);
-    expect(await response.json()).toEqual(updated);
+    expect(resposta.status()).toBe(200);
+    expect(await resposta.json()).toEqual(atualizada);
 
-    const persisted = await bookings.getBooking(id);
-    expect(await persisted.json()).toMatchObject({ firstname: 'After', totalprice: 999 });
+    const consulta = await reservas.buscarReserva(id);
+    expect(await consulta.json()).toMatchObject({ firstname: 'Depois', totalprice: 999 });
   });
 
-  test('returns 403 without a token', async ({ createBooking, bookings }) => {
-    const id = await createBooking();
+  test('devolve 403 sem token', async ({ criarReservaComLimpeza, reservas }) => {
+    const id = await criarReservaComLimpeza();
 
-    const response = await bookings.updateBooking(id, buildBooking({ firstname: 'Hacker' }));
+    const resposta = await reservas.atualizar(id, criarReserva({ firstname: 'Invasor' }));
 
-    expect(response.status()).toBe(403);
-    expect(await response.text()).toBe('Forbidden');
+    expect(resposta.status()).toBe(403);
+    expect(await resposta.text()).toBe('Forbidden');
   });
 
-  test('returns 403 with an invalid token', async ({ createBooking, bookings }) => {
-    const id = await createBooking();
+  test('devolve 403 com token inválido', async ({ criarReservaComLimpeza, reservas }) => {
+    const id = await criarReservaComLimpeza();
 
-    const response = await bookings.updateBooking(id, buildBooking({ firstname: 'Hacker' }), 'invalid-token');
+    const resposta = await reservas.atualizar(id, criarReserva({ firstname: 'Invasor' }), 'token-invalido');
 
-    expect(response.status()).toBe(403);
+    expect(resposta.status()).toBe(403);
   });
 
-  test('returns 405 for an unknown booking id', async ({ bookings, authToken }) => {
-    const response = await bookings.updateBooking(999999, buildBooking(), authToken);
+  test('devolve 405 para reserva inexistente', async ({ reservas, token }) => {
+    const resposta = await reservas.atualizar(999999, criarReserva(), token);
 
-    expect(response.status()).toBe(405);
+    expect(resposta.status()).toBe(405);
   });
 });
 
 test.describe('API - PATCH /booking/:id', () => {
-  test('updates only the sent fields', async ({ createBooking, bookings, authToken }) => {
-    const id = await createBooking({ firstname: 'Original', lastname: 'Surname', totalprice: 150 });
+  test('altera somente os campos enviados', async ({ criarReservaComLimpeza, reservas, token }) => {
+    const id = await criarReservaComLimpeza({ firstname: 'Original', lastname: 'Sobrenome', totalprice: 150 });
 
-    const response = await bookings.patchBooking(id, { firstname: 'Patched' }, authToken);
+    const resposta = await reservas.atualizarParcial(id, { firstname: 'Alterado' }, token);
 
-    expect(response.status()).toBe(200);
-    const body = (await response.json()) as Booking;
-    expect(body.firstname).toBe('Patched');
-    expect(body.lastname).toBe('Surname'); // untouched
-    expect(body.totalprice).toBe(150); // untouched
+    expect(resposta.status()).toBe(200);
+    const corpo = (await resposta.json()) as Reserva;
+    expect(corpo.firstname).toBe('Alterado');
+    expect(corpo.lastname).toBe('Sobrenome');
+    expect(corpo.totalprice).toBe(150);
   });
 
-  test('returns 403 without a token', async ({ createBooking, bookings }) => {
-    const id = await createBooking();
+  test('devolve 403 sem token', async ({ criarReservaComLimpeza, reservas }) => {
+    const id = await criarReservaComLimpeza();
 
-    const response = await bookings.patchBooking(id, { firstname: 'Hacker' });
+    const resposta = await reservas.atualizarParcial(id, { firstname: 'Invasor' });
 
-    expect(response.status()).toBe(403);
+    expect(resposta.status()).toBe(403);
   });
 });
 
 test.describe('API - DELETE /booking/:id', () => {
-  test('deletes a booking with a valid token', async ({ createBooking, bookings, authToken }) => {
-    const id = await createBooking();
+  test('exclui a reserva com token válido', async ({ criarReservaComLimpeza, reservas, token }) => {
+    const id = await criarReservaComLimpeza();
 
-    const response = await bookings.deleteBooking(id, authToken);
+    const resposta = await reservas.excluir(id, token);
 
-    expect(response.status()).toBe(201);
-    expect(await response.text()).toBe('Created');
+    expect(resposta.status()).toBe(201);
+    expect(await resposta.text()).toBe('Created');
 
-    const afterDelete = await bookings.getBooking(id);
-    expect(afterDelete.status()).toBe(404);
+    const consulta = await reservas.buscarReserva(id);
+    expect(consulta.status()).toBe(404);
   });
 
-  test('returns 403 without a token', async ({ createBooking, bookings }) => {
-    const id = await createBooking();
+  test('devolve 403 sem token', async ({ criarReservaComLimpeza, reservas }) => {
+    const id = await criarReservaComLimpeza();
 
-    const response = await bookings.deleteBooking(id);
+    const resposta = await reservas.excluir(id);
 
-    expect(response.status()).toBe(403);
+    expect(resposta.status()).toBe(403);
   });
 
-  test('returns 405 when the booking was already deleted', async ({ bookings, authToken }) => {
-    const payload = buildBooking();
-    const id = await bookings.createBookingAndGetId(payload);
+  test('devolve 405 quando a reserva já foi excluída', async ({ reservas, token }) => {
+    const id = await reservas.criarERetornarId(criarReserva());
 
-    expect((await bookings.deleteBooking(id, authToken)).status()).toBe(201);
+    expect((await reservas.excluir(id, token)).status()).toBe(201);
 
-    const secondAttempt = await bookings.deleteBooking(id, authToken);
-    expect(secondAttempt.status()).toBe(405);
+    const segundaTentativa = await reservas.excluir(id, token);
+    expect(segundaTentativa.status()).toBe(405);
   });
 });

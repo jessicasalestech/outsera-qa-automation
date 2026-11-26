@@ -1,190 +1,185 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 
-export interface BillingAddress {
-  postalCode: string;
-  houseNumber: string;
-  street: string;
-  city: string;
-  state: string;
-  country: string;
+export interface Endereco {
+  cep: string;
+  numero: string;
+  rua: string;
+  cidade: string;
+  estado: string;
+  pais: string;
 }
 
-export interface CreditCard {
-  number: string;
-  expiry: string;
+export interface Cartao {
+  numero: string;
+  validade: string;
   cvv: string;
-  holder: string;
+  titular: string;
 }
 
-/**
- * Page Object for /checkout.
- * The checkout is a 4-step wizard: cart -> sign in -> billing address -> payment.
- * Each step has its own "proceed" button (data-test proceed-1/2/3).
- */
-export class CheckoutPage {
+// Checkout em 4 etapas: carrinho -> login -> endereço -> pagamento.
+export class PaginaCheckout {
   constructor(private readonly page: Page) {}
 
-  get proceedFromCart(): Locator {
+  get avancarDoCarrinho(): Locator {
     return this.page.getByTestId('proceed-1');
   }
 
-  get proceedFromSignIn(): Locator {
+  get avancarDoLogin(): Locator {
     return this.page.getByTestId('proceed-2');
   }
 
-  get proceedFromBilling(): Locator {
+  get avancarDoEndereco(): Locator {
     return this.page.getByTestId('proceed-3');
   }
 
-  get postalCodeInput(): Locator {
+  get campoCep(): Locator {
     return this.page.getByTestId('postal_code');
   }
 
-  get houseNumberInput(): Locator {
+  get campoNumero(): Locator {
     return this.page.getByTestId('house_number');
   }
 
-  get streetInput(): Locator {
+  get campoRua(): Locator {
     return this.page.getByTestId('street');
   }
 
-  get cityInput(): Locator {
+  get campoCidade(): Locator {
     return this.page.getByTestId('city');
   }
 
-  get stateInput(): Locator {
+  get campoEstado(): Locator {
     return this.page.getByTestId('state');
   }
 
-  get countrySelect(): Locator {
+  get selectPais(): Locator {
     return this.page.getByTestId('country');
   }
 
-  get paymentMethodSelect(): Locator {
+  get selectFormaPagamento(): Locator {
     return this.page.getByTestId('payment-method');
   }
 
-  get cardNumberInput(): Locator {
+  get campoNumeroCartao(): Locator {
     return this.page.getByTestId('credit_card_number');
   }
 
-  get cardExpiryInput(): Locator {
+  get campoValidade(): Locator {
     return this.page.getByTestId('expiration_date');
   }
 
-  get cardCvvInput(): Locator {
+  get campoCvv(): Locator {
     return this.page.getByTestId('cvv');
   }
 
-  get cardHolderInput(): Locator {
+  get campoTitular(): Locator {
     return this.page.getByTestId('card_holder_name');
   }
 
-  get confirmPaymentButton(): Locator {
+  get botaoPagamento(): Locator {
     return this.page.getByTestId('finish');
   }
 
-  get paymentSuccessMessage(): Locator {
+  get mensagemPagamentoOk(): Locator {
     return this.page.getByTestId('payment-success-message');
   }
 
-  get orderConfirmation(): Locator {
+  get confirmacaoDoPedido(): Locator {
     return this.page.getByText(/Thanks for your order/i);
   }
 
-  /** Validation messages rendered by the checkout (address and card errors). */
-  get validationMessages(): Locator {
+  // Mensagens de validação do checkout (endereço e cartão).
+  get mensagensDeErro(): Locator {
     return this.page.locator('.alert-danger');
   }
 
-  get cartProductTitles(): Locator {
+  get produtosNoCarrinho(): Locator {
     return this.page.getByTestId('product-title');
   }
 
-  async open(): Promise<void> {
+  async abrir(): Promise<void> {
     await this.page.goto('/checkout');
-    await expect(this.proceedFromCart).toBeVisible();
-    // Guard against a lost "add to cart" click: without a product the wizard cannot start.
-    await expect(this.cartProductTitles.first()).toBeVisible();
+    await expect(this.avancarDoCarrinho).toBeVisible();
+    // Se o produto não entrou no carrinho, o fluxo não começa: falha aqui com mensagem clara.
+    await expect(this.produtosNoCarrinho.first()).toBeVisible();
   }
 
-  async goToBillingStep(): Promise<void> {
-    await this.proceedFromCart.click();
-    await expect(this.proceedFromSignIn).toBeEnabled();
-    await this.proceedFromSignIn.click();
-    await expect(this.postalCodeInput).toBeVisible();
+  async irParaEndereco(): Promise<void> {
+    await this.avancarDoCarrinho.click();
+    await expect(this.avancarDoLogin).toBeEnabled();
+    await this.avancarDoLogin.click();
+    await expect(this.campoCep).toBeVisible();
   }
 
-  async fillBillingAddress(address: BillingAddress): Promise<void> {
-    // The country list is loaded from the API: wait until it is populated.
+  async preencherEndereco(endereco: Endereco): Promise<void> {
+    // A lista de países vem da API: espero ela carregar antes de selecionar.
     await expect
-      .poll(async () => this.countrySelect.locator('option').count(), { timeout: 20_000 })
+      .poll(async () => this.selectPais.locator('option').count(), { timeout: 20_000 })
       .toBeGreaterThan(1);
 
-    // Filling postal code + house number triggers an asynchronous postcode lookup
-    // that rewrites street/city/state. On some responses the demo also clears the
-    // country and the postal code (known defect), which keeps the button disabled.
-    // Strategy: apply the values, wait for the lookup, and re-apply if it broke them.
-    for (let attempt = 1; attempt <= 3; attempt += 1) {
-      const lookupFinished = this.page
-        .waitForResponse((response) => response.url().includes('postcode-lookup'), { timeout: 10_000 })
+    // Ao preencher CEP + número, o site consulta o CEP e reescreve rua/cidade/estado.
+    // Em algumas respostas ele também limpa país e CEP, o que trava o botão de avançar.
+    // Então preencho, espero a consulta terminar e, se ela atrapalhou, preencho de novo.
+    for (let tentativa = 1; tentativa <= 3; tentativa += 1) {
+      const consultaCep = this.page
+        .waitForResponse((resposta) => resposta.url().includes('postcode-lookup'), { timeout: 10_000 })
         .catch(() => null);
 
-      await this.applyAddressValues(address);
-      await lookupFinished;
+      await this.aplicarEndereco(endereco);
+      await consultaCep;
 
-      const enabled = await expect(this.proceedFromBilling)
+      const liberou = await expect(this.avancarDoEndereco)
         .toBeEnabled({ timeout: 5_000 })
         .then(() => true)
         .catch(() => false);
-      if (enabled) {
+      if (liberou) {
         return;
       }
     }
 
-    await expect(this.proceedFromBilling, 'billing address should be accepted').toBeEnabled();
+    await expect(this.avancarDoEndereco, 'o endereço deveria ser aceito').toBeEnabled();
   }
 
-  private async applyAddressValues(address: BillingAddress): Promise<void> {
-    await this.countrySelect.selectOption({ label: address.country });
-    await this.postalCodeInput.fill(address.postalCode);
-    await this.houseNumberInput.fill(address.houseNumber);
-    await this.streetInput.fill(address.street);
-    await this.cityInput.fill(address.city);
-    await this.stateInput.fill(address.state);
+  async limparCamposObrigatoriosDoEndereco(): Promise<void> {
+    await this.campoCep.fill('');
+    await this.campoNumero.fill('');
   }
 
-  async clearRequiredAddressFields(): Promise<void> {
-    await this.postalCodeInput.fill('');
-    await this.houseNumberInput.fill('');
+  async irParaPagamento(): Promise<void> {
+    await this.avancarDoEndereco.click();
+    await expect(this.selectFormaPagamento).toBeVisible();
   }
 
-  async goToPaymentStep(): Promise<void> {
-    await this.proceedFromBilling.click();
-    await expect(this.paymentMethodSelect).toBeVisible();
+  async selecionarCartaoDeCredito(): Promise<void> {
+    await this.selectFormaPagamento.selectOption({ label: 'Credit Card' });
+    await expect(this.campoNumeroCartao).toBeVisible();
   }
 
-  async selectCreditCard(): Promise<void> {
-    await this.paymentMethodSelect.selectOption({ label: 'Credit Card' });
-    await expect(this.cardNumberInput).toBeVisible();
+  async preencherCartao(cartao: Cartao): Promise<void> {
+    await this.campoNumeroCartao.fill(cartao.numero);
+    await this.campoValidade.fill(cartao.validade);
+    await this.campoCvv.fill(cartao.cvv);
+    await this.campoTitular.fill(cartao.titular);
   }
 
-  async fillCreditCard(card: CreditCard): Promise<void> {
-    await this.cardNumberInput.fill(card.number);
-    await this.cardExpiryInput.fill(card.expiry);
-    await this.cardCvvInput.fill(card.cvv);
-    await this.cardHolderInput.fill(card.holder);
+  async pagar(): Promise<void> {
+    await this.botaoPagamento.click();
   }
 
-  async pay(): Promise<void> {
-    await this.confirmPaymentButton.click();
+  async confirmarPedido(): Promise<void> {
+    // Depois do pagamento o mesmo botão muda o texto para "Confirm". Espero o texto
+    // novo para não clicar de novo na ação antiga ("Check payment").
+    await expect(this.botaoPagamento).toHaveText(/confirm/i);
+    await this.botaoPagamento.click();
+    await expect(this.confirmacaoDoPedido).toContainText(/INV-\d+/);
   }
 
-  async confirmOrder(): Promise<void> {
-    // After the payment the same button changes its label to "Confirm";
-    // waiting for the new label avoids clicking the old "Check payment" handler again.
-    await expect(this.confirmPaymentButton).toHaveText(/confirm/i);
-    await this.confirmPaymentButton.click();
-    await expect(this.orderConfirmation).toContainText(/INV-\d+/);
+  private async aplicarEndereco(endereco: Endereco): Promise<void> {
+    await this.selectPais.selectOption({ label: endereco.pais });
+    await this.campoCep.fill(endereco.cep);
+    await this.campoNumero.fill(endereco.numero);
+    await this.campoRua.fill(endereco.rua);
+    await this.campoCidade.fill(endereco.cidade);
+    await this.campoEstado.fill(endereco.estado);
   }
 }

@@ -1,4 +1,4 @@
-name: QA Pipeline
+name: Testes automatizados
 
 on:
   push:
@@ -16,8 +16,8 @@ env:
   API_URL: https://restful-booker.herokuapp.com
 
 jobs:
-  api-tests:
-    name: API tests - Playwright request
+  testes-de-api:
+    name: API
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -28,29 +28,29 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Install dependencies
+      - name: Instalar dependências
         run: npm ci
 
-      - name: Run API tests
+      - name: Rodar testes de API
         run: npm run test:api
 
-      - name: Job summary
+      - name: Resumo da execução
         if: always()
-        run: node scripts/ci-summary.mjs "API tests" reports/results.json >> "$GITHUB_STEP_SUMMARY"
+        run: node scripts/ci-summary.mjs "Testes de API" reports/results.json >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload API report
+      - name: Publicar relatório
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: api-report
+          name: relatorio-api
           path: |
             reports/html
             reports/results.json
             reports/junit.xml
           retention-days: 7
 
-  e2e-tests:
-    name: E2E tests - Cucumber + Playwright
+  testes-e2e:
+    name: E2E
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -61,24 +61,24 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Install dependencies
+      - name: Instalar dependências
         run: npm ci
 
-      - name: Install Chromium
+      - name: Instalar Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Run E2E tests
+      - name: Rodar testes E2E
         run: npm run test:e2e
 
-      - name: Job summary
+      - name: Resumo da execução
         if: always()
-        run: node scripts/ci-summary.mjs "E2E tests" reports/results.json >> "$GITHUB_STEP_SUMMARY"
+        run: node scripts/ci-summary.mjs "Testes E2E" reports/results.json >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload E2E report and evidence
+      - name: Publicar relatório e evidências
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-report
+          name: relatorio-e2e
           path: |
             reports/html
             reports/results.json
@@ -86,8 +86,8 @@ jobs:
             test-results
           retention-days: 7
 
-  load-test:
-    name: Load test - k6 (optional, manual only)
+  teste-de-carga:
+    name: Carga (manual)
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -97,13 +97,13 @@ jobs:
 
       - uses: grafana/setup-k6-action@v1
 
-      - name: Run smoke load test
+      - name: Rodar smoke de carga
         run: k6 run -e SCENARIO=smoke k6/load-test.js
 
-      - name: Upload k6 summary
+      - name: Publicar resumo do k6
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: k6-summary
+          name: resumo-k6
           path: reports/k6-summary.json
           retention-days: 7

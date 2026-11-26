@@ -1,62 +1,60 @@
 /**
- * Builds a small Markdown summary of a Playwright JSON report and prints it.
- * Used by the GitHub Actions pipeline ($GITHUB_STEP_SUMMARY) and locally:
+ * Monta um resumo em Markdown do relatório JSON do Playwright.
+ * Usado no pipeline do GitHub Actions e também na máquina local:
  *
- *   node scripts/ci-summary.mjs "API tests" reports/results.json
+ *   node scripts/ci-summary.mjs "Testes de API" reports/results.json
  */
 import { readFileSync } from 'node:fs';
 
-const [label = 'Tests', reportFile = 'reports/results.json'] = process.argv.slice(2);
+const [rotulo = 'Testes', arquivoRelatorio = 'reports/results.json'] = process.argv.slice(2);
 
-const flattenSpecs = (suite, acc = []) => {
+const coletarTestes = (suite, acumulado = []) => {
   for (const spec of suite.specs ?? []) {
-    for (const test of spec.tests ?? []) {
-      const results = test.results ?? [];
-      const last = results[results.length - 1] ?? {};
-      acc.push({ title: spec.title, status: last.status ?? 'skipped', duration: last.duration ?? 0 });
+    for (const teste of spec.tests ?? []) {
+      const resultados = teste.results ?? [];
+      const ultimo = resultados[resultados.length - 1] ?? {};
+      acumulado.push({ titulo: spec.title, status: ultimo.status ?? 'skipped', duracao: ultimo.duration ?? 0 });
     }
   }
-  for (const child of suite.suites ?? []) {
-    flattenSpecs(child, acc);
+  for (const filha of suite.suites ?? []) {
+    coletarTestes(filha, acumulado);
   }
-  return acc;
+  return acumulado;
 };
 
-let report;
+let relatorio;
 try {
-  report = JSON.parse(readFileSync(reportFile, 'utf8'));
-} catch (error) {
-  console.log(`## ${label}\n\n> Report not found (${reportFile}): ${error.message}`);
+  relatorio = JSON.parse(readFileSync(arquivoRelatorio, 'utf8'));
+} catch (erro) {
+  console.log(`## ${rotulo}\n\n> Relatório não encontrado (${arquivoRelatorio}): ${erro.message}`);
   process.exit(0);
 }
 
-const tests = report.suites.flatMap((suite) => flattenSpecs(suite));
-const count = (status) => tests.filter((test) => test.status === status).length;
-const passed = count('passed');
-const failed = count('failed');
-const skipped = count('skipped');
-const flaky = count('timedOut') + count('interrupted');
-const totalSeconds = (tests.reduce((sum, test) => sum + test.duration, 0) / 1000).toFixed(1);
+const testes = relatorio.suites.flatMap((suite) => coletarTestes(suite));
+const contar = (status) => testes.filter((teste) => teste.status === status).length;
+const passaram = contar('passed');
+const falharam = contar('failed');
+const abortados = contar('timedOut') + contar('interrupted');
+const pulados = contar('skipped');
+const segundos = (testes.reduce((total, teste) => total + teste.duracao, 0) / 1000).toFixed(1);
 
-const icon = (value) => (value > 0 ? '❌' : '✅');
-
-console.log(`## ${label}`);
+console.log(`## ${rotulo}`);
 console.log('');
-console.log('| Metric | Value |');
+console.log('| Métrica | Valor |');
 console.log('| --- | --- |');
-console.log(`| Total | ${tests.length} |`);
-console.log(`| Passed | ✅ ${passed} |`);
-console.log(`| Failed | ${icon(failed)} ${failed} |`);
-console.log(`| Aborted / timed out | ${flaky} |`);
-console.log(`| Skipped | ${skipped} |`);
-console.log(`| Execution time | ${totalSeconds}s |`);
+console.log(`| Total | ${testes.length} |`);
+console.log(`| Passaram | ✅ ${passaram} |`);
+console.log(`| Falharam | ${falharam > 0 ? '❌' : '✅'} ${falharam} |`);
+console.log(`| Abortados / timeout | ${abortados} |`);
+console.log(`| Pulados | ${pulados} |`);
+console.log(`| Tempo total | ${segundos}s |`);
 console.log('');
 
-if (failed + flaky > 0) {
-  console.log('### Failed tests');
+if (falharam + abortados > 0) {
+  console.log('### Testes com falha');
   console.log('');
-  for (const test of tests.filter((t) => t.status === 'failed' || t.status === 'timedOut' || t.status === 'interrupted')) {
-    console.log(`- \`${test.title}\` (${test.status})`);
+  for (const teste of testes.filter((t) => ['failed', 'timedOut', 'interrupted'].includes(t.status))) {
+    console.log(`- \`${teste.titulo}\` (${teste.status})`);
   }
   console.log('');
 }

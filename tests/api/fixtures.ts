@@ -1,43 +1,38 @@
 import { test as base, expect } from '@playwright/test';
-import { BookingClient } from '../../src/api/booking.client';
-import { buildBooking } from '../../src/api/booking.factory';
-import type { Booking } from '../../src/api/types';
+import { ClienteReservas } from '../../src/api/booking.client';
+import { criarReserva } from '../../src/api/booking.factory';
+import type { Reserva } from '../../src/api/types';
 
-/**
- * Custom fixtures keep the tests declarative and make them independent:
- * each test asks for `bookings` (HTTP client), `authToken` (valid admin token)
- * or `createBooking` (creates data and deletes it on teardown).
- */
-type ApiFixtures = {
-  bookings: BookingClient;
-  authToken: string;
-  createBooking: (overrides?: Partial<Booking>) => Promise<number>;
+// Fixtures da suíte de API: cliente HTTP, token e criação de reserva com limpeza.
+type FixturesApi = {
+  reservas: ClienteReservas;
+  token: string;
+  criarReservaComLimpeza: (alteracoes?: Partial<Reserva>) => Promise<number>;
 };
 
-export const test = base.extend<ApiFixtures>({
-  bookings: async ({ request }, use) => {
-    await use(new BookingClient(request));
+export const test = base.extend<FixturesApi>({
+  reservas: async ({ request }, use) => {
+    await use(new ClienteReservas(request));
   },
 
-  authToken: async ({ bookings }, use) => {
-    const token = await bookings.authenticateAndGetToken();
-    await use(token);
+  token: async ({ reservas }, use) => {
+    await use(await reservas.obterToken());
   },
 
-  createBooking: async ({ bookings }, use) => {
-    const createdIds: number[] = [];
+  criarReservaComLimpeza: async ({ reservas }, use) => {
+    const criadas: number[] = [];
 
-    await use(async (overrides: Partial<Booking> = {}) => {
-      const id = await bookings.createBookingAndGetId(buildBooking(overrides));
-      createdIds.push(id);
+    await use(async (alteracoes: Partial<Reserva> = {}) => {
+      const id = await reservas.criarERetornarId(criarReserva(alteracoes));
+      criadas.push(id);
       return id;
     });
 
-    // Test data cleanup: keeps the demo API tidy and the suite repeatable.
-    if (createdIds.length > 0) {
-      const token = await bookings.authenticateAndGetToken();
-      for (const id of createdIds) {
-        await bookings.deleteBooking(id, token);
+    // Apaga o que o teste criou, para a API demo não acumular lixo.
+    if (criadas.length > 0) {
+      const token = await reservas.obterToken();
+      for (const id of criadas) {
+        await reservas.excluir(id, token);
       }
     }
   },

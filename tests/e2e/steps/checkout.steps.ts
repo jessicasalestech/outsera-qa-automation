@@ -5,105 +5,101 @@ import { test } from '../fixtures';
 
 const { Given, When, Then } = createBdd(test);
 
-// --- Given ----------------------------------------------------------------
+// --- Dado -----------------------------------------------------------------
 
-Given('I am logged in as a customer', async ({ loginPage, page }) => {
-  await loginPage.open();
-  await loginPage.signIn(env.customer.email, env.customer.password);
+Given('que estou logado como cliente', async ({ login, page }) => {
+  await login.abrir();
+  await login.entrar(env.cliente.email, env.cliente.senha);
   await expect(page).toHaveURL(/\/account$/);
 });
 
-Given('the product {string} is in my cart', async ({ homePage, productPage }, product: string) => {
-  await homePage.open();
-  await homePage.searchFor(product);
-  await expect(homePage.productNames.first()).toBeVisible();
+Given('o produto {string} está no carrinho', async ({ produtos }, nomeProduto: string) => {
+  await produtos.abrir();
+  await produtos.buscar(nomeProduto);
+  await expect(produtos.nomesDosProdutos.first()).toBeVisible();
 
-  await homePage.openFirstProduct();
-  await expect(productPage.title).toContainText(product);
+  await produtos.abrirPrimeiroResultado();
+  await expect(produtos.tituloDoProduto).toContainText(nomeProduto);
 
-  await productPage.addToCart();
-  await expect(homePage.cartQuantity).toHaveText('1');
+  await produtos.adicionarAoCarrinho();
+  await expect(produtos.quantidadeNoCarrinho).toHaveText('1');
 });
 
-// --- When -----------------------------------------------------------------
+// --- Quando ---------------------------------------------------------------
 
-When('I start the checkout', async ({ checkoutPage }) => {
-  await checkoutPage.open();
-  await checkoutPage.goToBillingStep();
+When('inicio o checkout', async ({ checkout }) => {
+  await checkout.abrir();
+  await checkout.irParaEndereco();
 });
 
-When('I start the checkout with a valid billing address', async ({ checkoutPage }) => {
-  await checkoutPage.open();
-  await checkoutPage.goToBillingStep();
-  await checkoutPage.fillBillingAddress(env.billingAddress);
-  await checkoutPage.goToPaymentStep();
+When('inicio o checkout com um endereço válido', async ({ checkout }) => {
+  await checkout.abrir();
+  await checkout.irParaEndereco();
+  await checkout.preencherEndereco(env.endereco);
+  await checkout.irParaPagamento();
 });
 
-When('I clear the required address fields', async ({ checkoutPage }) => {
-  await checkoutPage.clearRequiredAddressFields();
+When('limpo os campos obrigatórios do endereço', async ({ checkout }) => {
+  await checkout.limparCamposObrigatoriosDoEndereco();
 });
 
-When('I select the credit card payment method', async ({ checkoutPage }) => {
-  await checkoutPage.selectCreditCard();
-});
-
-When('I pay with a valid credit card', async ({ checkoutPage }) => {
-  await checkoutPage.selectCreditCard();
-  await checkoutPage.fillCreditCard({
-    number: env.payment.validCardNumber,
-    expiry: env.payment.validExpiry,
-    cvv: env.payment.validCvv,
-    holder: env.payment.validHolder,
+When('pago com um cartão válido', async ({ checkout }) => {
+  await checkout.selecionarCartaoDeCredito();
+  await checkout.preencherCartao({
+    numero: env.cartao.numeroValido,
+    validade: env.cartao.validade,
+    cvv: env.cartao.cvv,
+    titular: env.cartao.titular,
   });
-  await expect(checkoutPage.confirmPaymentButton).toBeEnabled();
-  await checkoutPage.pay();
+  await expect(checkout.botaoPagamento).toBeEnabled();
+  await checkout.pagar();
 });
 
-When('I pay with the card number {string}', async ({ checkoutPage }, cardNumber: string) => {
-  await checkoutPage.selectCreditCard();
-  await checkoutPage.fillCreditCard({
-    number: cardNumber,
-    expiry: env.payment.validExpiry,
-    cvv: env.payment.validCvv,
-    holder: env.payment.validHolder,
+When('pago com o cartão número {string}', async ({ checkout }, numero: string) => {
+  await checkout.selecionarCartaoDeCredito();
+  await checkout.preencherCartao({
+    numero,
+    validade: env.cartao.validade,
+    cvv: env.cartao.cvv,
+    titular: env.cartao.titular,
   });
 });
 
 When(
-  'I fill the credit card with the number {string} and the expiration date {string}',
-  async ({ checkoutPage }, cardNumber: string, expiry: string) => {
-    await checkoutPage.selectCreditCard();
-    await checkoutPage.fillCreditCard({
-      number: cardNumber,
-      expiry,
-      cvv: env.payment.validCvv,
-      holder: env.payment.validHolder,
+  'preencho o cartão número {string} com validade {string}',
+  async ({ checkout }, numero: string, validade: string) => {
+    await checkout.selecionarCartaoDeCredito();
+    await checkout.preencherCartao({
+      numero,
+      validade,
+      cvv: env.cartao.cvv,
+      titular: env.cartao.titular,
     });
   },
 );
 
-When('I confirm the order', async ({ checkoutPage }) => {
-  await checkoutPage.confirmOrder();
+When('confirmo o pedido', async ({ checkout }) => {
+  await checkout.confirmarPedido();
 });
 
-// --- Then -----------------------------------------------------------------
+// --- Então ----------------------------------------------------------------
 
-Then('I should see the payment success message', async ({ checkoutPage }) => {
-  await expect(checkoutPage.paymentSuccessMessage).toHaveText('Payment was successful');
+Then('devo ver a mensagem de pagamento aprovado', async ({ checkout }) => {
+  await expect(checkout.mensagemPagamentoOk).toHaveText('Payment was successful');
 });
 
-Then('I should see the order confirmation with an invoice number', async ({ checkoutPage }) => {
-  await expect(checkoutPage.orderConfirmation).toContainText(/INV-\d+/);
+Then('devo ver o pedido confirmado com número de nota fiscal', async ({ checkout }) => {
+  await expect(checkout.confirmacaoDoPedido).toContainText(/INV-\d+/);
 });
 
-Then('the checkout button of the billing step should be disabled', async ({ checkoutPage }) => {
-  await expect(checkoutPage.proceedFromBilling).toBeDisabled();
+Then('o botão de avançar do endereço deve ficar desabilitado', async ({ checkout }) => {
+  await expect(checkout.avancarDoEndereco).toBeDisabled();
 });
 
-Then('the payment button should be disabled', async ({ checkoutPage }) => {
-  await expect(checkoutPage.confirmPaymentButton).toBeDisabled();
+Then('o botão de pagamento deve ficar desabilitado', async ({ checkout }) => {
+  await expect(checkout.botaoPagamento).toBeDisabled();
 });
 
-Then('I should see the checkout error {string}', async ({ checkoutPage }, message: string) => {
-  await expect(checkoutPage.validationMessages.filter({ hasText: message })).toBeVisible();
+Then('devo ver a mensagem de erro {string}', async ({ checkout }, mensagem: string) => {
+  await expect(checkout.mensagensDeErro.filter({ hasText: mensagem })).toBeVisible();
 });

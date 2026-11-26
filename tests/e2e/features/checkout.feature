@@ -1,34 +1,35 @@
+# language: pt
+
 @checkout
-Feature: Checkout and payment
+Funcionalidade: Checkout e pagamento
+  Como cliente logado
+  Quero comprar um produto com cartão de crédito
+  Para concluir o pedido do carrinho até a confirmação
 
-  As a logged-in customer
-  I want to buy a product and pay with a credit card
-  So that I can complete an order from cart to confirmation
+  Contexto:
+    Dado que estou logado como cliente
+    E o produto "Pliers" está no carrinho
 
-  Background:
-    Given I am logged in as a customer
-    And the product "Pliers" is in my cart
+  Cenário: Compra concluída com dados válidos
+    Quando inicio o checkout com um endereço válido
+    E pago com um cartão válido
+    Então devo ver a mensagem de pagamento aprovado
+    Quando confirmo o pedido
+    Então devo ver o pedido confirmado com número de nota fiscal
 
-  Scenario: Complete a purchase with valid data
-    When I start the checkout with a valid billing address
-    And I pay with a valid credit card
-    Then I should see the payment success message
-    When I confirm the order
-    Then I should see the order confirmation with an invoice number
+  Cenário: Checkout bloqueado com endereço incompleto
+    Quando inicio o checkout
+    E limpo os campos obrigatórios do endereço
+    Então o botão de avançar do endereço deve ficar desabilitado
 
-  Scenario: Checkout is blocked when the delivery address is incomplete
-    When I start the checkout
-    And I clear the required address fields
-    Then the checkout button of the billing step should be disabled
+  Cenário: Pagamento recusado com número de cartão inválido
+    Quando inicio o checkout com um endereço válido
+    E pago com o cartão número "1234"
+    Então devo ver a mensagem de erro "Invalid card number format"
+    E o botão de pagamento deve ficar desabilitado
 
-  Scenario: Payment is refused when the card number is invalid
-    When I start the checkout with a valid billing address
-    And I pay with the card number "1234"
-    Then I should see the checkout error "Invalid card number format"
-    And the payment button should be disabled
-
-  Scenario: Payment is refused when the card is expired
-    When I start the checkout with a valid billing address
-    And I fill the credit card with the number "4111-1111-1111-1111" and the expiration date "01/2020"
-    Then I should see the checkout error "Expiration date must be in the future"
-    And the payment button should be disabled
+  Cenário: Pagamento recusado com cartão vencido
+    Quando inicio o checkout com um endereço válido
+    E preencho o cartão número "4111-1111-1111-1111" com validade "01/2020"
+    Então devo ver a mensagem de erro "Expiration date must be in the future"
+    E o botão de pagamento deve ficar desabilitado

@@ -2,7 +2,7 @@
   "name": "outsera-qa-automation",
   "version": "1.0.0",
   "private": true,
-  "description": "API + E2E test automation in TypeScript with Playwright and playwright-bdd (Cucumber/Gherkin)",
+  "description": "Automação de testes de API e E2E com Playwright e playwright-bdd",
   "license": "MIT",
   "engines": {
     "node": ">=20.10"

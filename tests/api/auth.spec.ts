@@ -1,46 +1,46 @@
 import { test, expect } from './fixtures';
 import { env } from '../../src/config/env';
-import type { AuthResponse } from '../../src/api/types';
+import type { RespostaLogin } from '../../src/api/types';
 
-test.describe('API - POST /auth (authentication)', () => {
-  test('returns a token for valid credentials', async ({ bookings }) => {
-    const response = await bookings.authenticate(env.bookerAdmin.username, env.bookerAdmin.password);
+test.describe('API - POST /auth (autenticação)', () => {
+  test('devolve token com credenciais válidas', async ({ reservas }) => {
+    const resposta = await reservas.login(env.adminApi.usuario, env.adminApi.senha);
 
-    expect(response.status()).toBe(200);
-    expect(response.headers()['content-type']).toContain('application/json');
+    expect(resposta.status()).toBe(200);
+    expect(resposta.headers()['content-type']).toContain('application/json');
 
-    const body = (await response.json()) as AuthResponse;
-    expect(body.token).toEqual(expect.any(String));
-    expect(body.token!.length).toBeGreaterThan(5);
-    expect(body.reason).toBeUndefined();
+    const corpo = (await resposta.json()) as RespostaLogin;
+    expect(corpo.token).toEqual(expect.any(String));
+    expect(corpo.token!.length).toBeGreaterThan(5);
+    expect(corpo.reason).toBeUndefined();
   });
 
-  test('rejects a wrong password (documented quirk: HTTP 200 + reason)', async ({ bookings }) => {
-    const response = await bookings.authenticate(env.bookerAdmin.username, env.bookerAdmin.wrongPassword);
+  test('recusa senha errada (devolve 200 com motivo no corpo)', async ({ reservas }) => {
+    const resposta = await reservas.login(env.adminApi.usuario, env.adminApi.senhaErrada);
 
-    // Restful-booker answers 200 for bad credentials; the failure is in the body.
-    // The test documents the real contract instead of inventing a 401.
-    expect(response.status()).toBe(200);
-    const body = (await response.json()) as AuthResponse;
-    expect(body.reason).toBe('Bad credentials');
-    expect(body.token).toBeUndefined();
+    // A API responde 200 mesmo com credencial inválida; a falha vem no corpo.
+    // O teste registra o comportamento real em vez de inventar um 401.
+    expect(resposta.status()).toBe(200);
+    const corpo = (await resposta.json()) as RespostaLogin;
+    expect(corpo.reason).toBe('Bad credentials');
+    expect(corpo.token).toBeUndefined();
   });
 
-  test('rejects an unknown user', async ({ bookings }) => {
-    const response = await bookings.authenticate('unknown-user', env.bookerAdmin.wrongPassword);
+  test('recusa usuário inexistente', async ({ reservas }) => {
+    const resposta = await reservas.login('usuario-inexistente', env.adminApi.senhaErrada);
 
-    expect(response.status()).toBe(200);
-    const body = (await response.json()) as AuthResponse;
-    expect(body.reason).toBe('Bad credentials');
-    expect(body.token).toBeUndefined();
+    expect(resposta.status()).toBe(200);
+    const corpo = (await resposta.json()) as RespostaLogin;
+    expect(corpo.reason).toBe('Bad credentials');
+    expect(corpo.token).toBeUndefined();
   });
 
-  test('rejects an empty payload (required fields missing)', async ({ bookings }) => {
-    const response = await bookings.authenticate('', '');
+  test('recusa payload vazio', async ({ reservas }) => {
+    const resposta = await reservas.login('', '');
 
-    expect(response.status()).toBe(200);
-    const body = (await response.json()) as AuthResponse;
-    expect(body.reason).toBe('Bad credentials');
-    expect(body.token).toBeUndefined();
+    expect(resposta.status()).toBe(200);
+    const corpo = (await resposta.json()) as RespostaLogin;
+    expect(corpo.reason).toBe('Bad credentials');
+    expect(corpo.token).toBeUndefined();
   });
 });

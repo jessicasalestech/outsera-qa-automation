@@ -1,29 +1,29 @@
-/** Contract types for the Restful-booker API (system under test for the API suite). */
+// Tipos do contrato da API Restful-booker.
 
-export interface BookingDates {
+export interface DatasReserva {
   checkin: string;
   checkout: string;
 }
 
-export interface Booking {
+export interface Reserva {
   firstname: string;
   lastname: string;
   totalprice: number;
   depositpaid: boolean;
-  bookingdates: BookingDates;
+  bookingdates: DatasReserva;
   additionalneeds?: string;
 }
 
-export interface CreateBookingResponse {
+export interface ReservaCriada {
   bookingid: number;
-  booking: Booking;
+  booking: Reserva;
 }
 
-export interface BookingIdEntry {
+export interface IdReserva {
   bookingid: number;
 }
 
-export interface AuthResponse {
+export interface RespostaLogin {
   token?: string;
   reason?: string;
 }
