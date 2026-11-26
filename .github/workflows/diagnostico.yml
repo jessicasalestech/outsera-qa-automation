@@ -1,0 +1,58 @@
+name: Diagnostico (temporario)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diagnostico:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Status dos sites
+        run: |
+          echo "=== home ==="
+          curl -s -o /tmp/home.html -w "status=%{http_code} tempo=%{time_total}\n" -A "Mozilla/5.0" https://practicesoftwaretesting.com/
+          echo "=== api produtos ==="
+          curl -s -o /tmp/api.json -w "status=%{http_code} tempo=%{time_total}\n" https://api.practicesoftwaretesting.com/products
+          echo "=== tamanho home ==="; wc -c /tmp/home.html
+          echo "=== titulo home ==="; grep -o "<title>[^<]*</title>" /tmp/home.html | head -3
+          echo "=== primeiros 600 chars da home ==="; head -c 600 /tmp/home.html
+          echo
+          echo "=== primeiros 300 chars da api ==="; head -c 300 /tmp/api.json
+          echo
+          echo "=== procurando data-test=product-name na home ==="; grep -c "product-name" /tmp/home.html || true
+
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+
+      - name: Abrir a home com o Playwright e fotografar
+        run: |
+          cat > diag.mjs <<'JS'
+          import { chromium } from 'playwright';
+          const browser = await chromium.launch();
+          const page = await browser.newPage();
+          page.on('console', (m) => console.log('CONSOLE', m.type(), m.text().slice(0, 200)));
+          page.on('response', (r) => { if (r.url().includes('api.practicesoftwaretesting')) console.log('API', r.status(), r.url().slice(0, 90)); });
+          await page.goto('https://practicesoftwaretesting.com/', { waitUntil: 'domcontentloaded' });
+          await page.waitForTimeout(8000);
+          console.log('TITULO:', await page.title());
+          console.log('URL:', page.url());
+          console.log('produtos:', await page.locator('[data-test="product-name"]').count());
+          console.log('texto:', (await page.locator('body').innerText()).slice(0, 500).replace(/\n/g, ' | '));
+          await page.screenshot({ path: 'home-ci.png', fullPage: false });
+          await browser.close();
+          JS
+          node diag.mjs
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: diagnostico
+          path: |
+            home-ci.png
+            /tmp/home.html
