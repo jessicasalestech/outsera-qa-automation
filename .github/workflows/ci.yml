@@ -67,8 +67,31 @@ jobs:
       - name: Instalar Chromium
         run: npx playwright install --with-deps chromium
 
+      # A loja demo fica atrás de proteção anti-bot e costuma bloquear IP de runner
+      # de CI. Se estiver bloqueada, o E2E não roda aqui (rode na máquina local).
+      - name: Checar acesso aos sites
+        id: checar
+        run: |
+          if node scripts/check-targets.mjs; then
+            echo "liberado=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "liberado=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Rodar testes E2E
+        if: steps.checar.outputs.liberado == 'true'
         run: npm run test:e2e
+
+      - name: Aviso quando o E2E não pôde rodar
+        if: steps.checar.outputs.liberado != 'true'
+        run: |
+          echo "::warning::E2E não executado: o site demo bloqueou o acesso a partir do runner."
+          {
+            echo "## Testes E2E"
+            echo ""
+            echo "Não executados neste runner: o site demo respondeu com bloqueio anti-bot."
+            echo "Rode localmente com \`npm run test:e2e\`."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Resumo da execução
         if: always()
