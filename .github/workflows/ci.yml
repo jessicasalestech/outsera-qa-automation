@@ -1,0 +1,109 @@
+name: QA Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BASE_URL: https://practicesoftwaretesting.com
+  API_URL: https://restful-booker.herokuapp.com
+
+jobs:
+  api-tests:
+    name: API tests - Playwright request
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run API tests
+        run: npm run test:api
+
+      - name: Job summary
+        if: always()
+        run: node scripts/ci-summary.mjs "API tests" reports/results.json >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload API report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-report
+          path: |
+            reports/html
+            reports/results.json
+            reports/junit.xml
+          retention-days: 7
+
+  e2e-tests:
+    name: E2E tests - Cucumber + Playwright
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E tests
+        run: npm run test:e2e
+
+      - name: Job summary
+        if: always()
+        run: node scripts/ci-summary.mjs "E2E tests" reports/results.json >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload E2E report and evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report
+          path: |
+            reports/html
+            reports/results.json
+            reports/junit.xml
+            test-results
+          retention-days: 7
+
+  load-test:
+    name: Load test - k6 (optional, manual only)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: grafana/setup-k6-action@v1
+
+      - name: Run smoke load test
+        run: k6 run -e SCENARIO=smoke k6/load-test.js
+
+      - name: Upload k6 summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-summary
+          path: reports/k6-summary.json
+          retention-days: 7

@@ -1,0 +1,30 @@
+{
+  "name": "outsera-qa-automation",
+  "version": "1.0.0",
+  "private": true,
+  "description": "API + E2E test automation in TypeScript with Playwright and playwright-bdd (Cucumber/Gherkin)",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.10"
+  },
+  "scripts": {
+    "test": "npm run test:api && npm run test:e2e",
+    "test:api": "playwright test --project=api",
+    "test:e2e": "bddgen && playwright test --project=e2e",
+    "test:e2e:headed": "bddgen && playwright test --project=e2e --headed",
+    "test:e2e:ui": "bddgen && playwright test --project=e2e --ui",
+    "bdd:gen": "bddgen",
+    "report": "playwright show-report reports/html",
+    "typecheck": "tsc --noEmit",
+    "check:targets": "node scripts/check-targets.mjs",
+    "k6:smoke": "k6 run -e SCENARIO=smoke k6/load-test.js",
+    "k6:load": "k6 run -e SCENARIO=load k6/load-test.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.1",
+    "@types/node": "^26.6.11",
+    "dotenv": "^18.0.10",
+    "playwright-bdd": "^9.2.1",
+    "typescript": "^7.0.2"
+  }
+}
